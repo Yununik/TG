@@ -55,16 +55,23 @@ jobs:
       # Шаг 6: Отправить код на сервер через SSH
       - name: Отправить код на сервер
         run: |
-          # Создать архив с проектом (игнорируем предупреждения о измененных файлах)
-          tar -czf deploy.tar.gz \
+          # Проверить, что файлы существуют
+          echo "=== Проверка файлов перед архивацией ==="
+          ls -la components/telegram/
+          
+          # Создать архив с проектом
+          tar -cvzf deploy.tar.gz \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='.next' \
             --exclude='*.log' \
             --exclude='.DS_Store' \
             --exclude='.env*.local' \
-            --warning=no-file-changed \
-            . || true
+            .
+          
+          # Проверить содержимое архива
+          echo "=== Содержимое архива ==="
+          tar -tzf deploy.tar.gz | grep -E "components/telegram|TelegramProvider" || echo "ВНИМАНИЕ: TelegramProvider не найден в архиве!"
           
           # Отправить архив на сервер
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
@@ -94,8 +101,8 @@ jobs:
             # Очистить кэш Next.js перед сборкой
             rm -rf .next
             
-            # Установить зависимости
-            npm ci --production
+            # Установить ВСЕ зависимости (включая devDependencies для сборки)
+            npm ci
             
             # Собрать проект (если нужно)
             npm run build
