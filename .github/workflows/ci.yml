@@ -1,0 +1,51 @@
+# GitHub Actions - Автоматическая проверка кода
+# Это файл, который говорит GitHub: "Каждый раз, когда код отправляется, проверь его на ошибки"
+
+name: CI - Проверка кода
+
+# Когда запускать:
+# - Когда код отправляется в GitHub (push)
+# - Когда создается Pull Request
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+# Что делать:
+jobs:
+  # Задача: Проверка кода
+  check:
+    name: Проверка TypeScript и линтинг
+    runs-on: ubuntu-latest  # Запускаем на виртуальном компьютере Linux
+    
+    steps:
+      # Шаг 1: Получить код из репозитория
+      - name: Получить код
+        uses: actions/checkout@v3
+      
+      # Шаг 2: Установить Node.js
+      - name: Установить Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'  # Версия Node.js
+          cache: 'npm'  # Кэшируем зависимости для скорости
+      
+      # Шаг 3: Установить зависимости (npm install)
+      - name: Установить зависимости
+        run: npm ci  # ci = clean install, быстрее чем npm install
+      
+      # Шаг 4: Проверить типы TypeScript
+      - name: Проверить типы
+        run: npm run type-check
+      
+      # Шаг 5: Проверить код на ошибки (ESLint)
+      - name: Проверить код (ESLint)
+        run: npm run lint
+      
+      # Шаг 6: Собрать проект (проверить, что все собирается)
+      - name: Собрать проект
+        run: npm run build
+        env:
+          # Переменные окружения для сборки (если нужны)
+          NEXT_PUBLIC_TELEGRAM_BOT_TOKEN: ${{ secrets.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN }}

@@ -1,0 +1,88 @@
+# GitHub Actions - Автоматический деплой на сервер
+# ВАЖНО: Этот файл будет работать только когда у тебя появится сервер
+# Сейчас он закомментирован и готов к использованию
+
+name: Deploy - Отправка на сервер
+
+# Когда запускать:
+# - Только когда код отправляется в ветку main/master
+# - Только если все проверки прошли успешно
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # Можно запустить вручную из GitHub
+
+# Что делать:
+jobs:
+  # Задача: Отправка на сервер
+  deploy:
+    name: Отправить на сервер
+    runs-on: ubuntu-latest
+    
+    # Запускать только если проверки прошли
+    needs: []  # Здесь можно указать другие задачи, которые должны выполниться сначала
+    
+    steps:
+      # Шаг 1: Получить код
+      - name: Получить код
+        uses: actions/checkout@v3
+      
+      # Шаг 2: Установить Node.js
+      - name: Установить Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      # Шаг 3: Установить зависимости
+      - name: Установить зависимости
+        run: npm ci
+      
+      # Шаг 4: Собрать проект
+      - name: Собрать проект
+        run: npm run build
+        env:
+          NEXT_PUBLIC_TELEGRAM_BOT_TOKEN: ${{ secrets.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN }}
+      
+      # Шаг 5: Настроить SSH ключ для подключения к серверу
+      - name: Настроить SSH ключ
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+      
+      # Шаг 6: Отправить код на сервер через SSH
+      - name: Отправить код на сервер
+        run: |
+          # Создать архив с проектом
+          tar -czf deploy.tar.gz --exclude='.git' --exclude='node_modules' --exclude='.next' .
+          
+          # Отправить архив на сервер
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            deploy.tar.gz \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/telegram-bot/
+      
+      # Шаг 7: Распаковать и установить на сервере
+      - name: Установить и запустить на сервере
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd /var/www/telegram-bot
+            
+            # Распаковать архив
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
+            
+            # Установить зависимости
+            npm ci --production
+            
+            # Собрать проект (если нужно)
+            npm run build
+            
+            # Перезапустить бота (если используется PM2)
+            # pm2 restart telegram-bot || pm2 start npm --name "telegram-bot" -- start
+            
+            # Или просто запустить (для первого раза)
+            # npm start &
+          EOF
