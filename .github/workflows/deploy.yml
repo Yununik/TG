@@ -55,8 +55,16 @@ jobs:
       # Шаг 6: Отправить код на сервер через SSH
       - name: Отправить код на сервер
         run: |
-          # Создать архив с проектом
-          tar -czf deploy.tar.gz --exclude='.git' --exclude='node_modules' --exclude='.next' .
+          # Создать архив с проектом (игнорируем предупреждения о измененных файлах)
+          tar -czf deploy.tar.gz \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='*.log' \
+            --exclude='.DS_Store' \
+            --exclude='.env*.local' \
+            --warning=no-file-changed \
+            . || true
           
           # Отправить архив на сервер
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
