@@ -60,6 +60,8 @@ jobs:
           ls -la components/telegram/
           
           # Создать архив с проектом
+          # Используем set +e чтобы игнорировать ошибку "file changed"
+          set +e
           tar -cvzf deploy.tar.gz \
             --exclude='.git' \
             --exclude='node_modules' \
@@ -68,6 +70,16 @@ jobs:
             --exclude='.DS_Store' \
             --exclude='.env*.local' \
             .
+          TAR_EXIT=$?
+          set -e
+          
+          # Проверяем, что архив создан и не пустой
+          if [ ! -f deploy.tar.gz ] || [ ! -s deploy.tar.gz ]; then
+            echo "ОШИБКА: Архив не создан или пустой!"
+            exit 1
+          fi
+          
+          echo "Архив создан успешно (tar exit code: $TAR_EXIT)"
           
           # Проверить содержимое архива
           echo "=== Содержимое архива ==="
