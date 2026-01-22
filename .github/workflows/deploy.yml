@@ -87,6 +87,13 @@ jobs:
             tar -xzf deploy.tar.gz
             rm deploy.tar.gz
             
+            # Проверить, что файлы на месте
+            ls -la components/telegram/ || echo "Папка components/telegram не найдена"
+            ls -la components/telegram/TelegramProvider.tsx || echo "Файл TelegramProvider.tsx не найден"
+            
+            # Очистить кэш Next.js перед сборкой
+            rm -rf .next
+            
             # Установить зависимости
             npm ci --production
             
