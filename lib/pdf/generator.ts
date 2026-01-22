@@ -189,7 +189,9 @@ export async function generatePDF(
   // Наложение подписи, если требуется
   if (options.includeSignature && userData.signatureImage) {
     try {
-      const signatureImage = await pdfDoc.embedPng(userData.signatureImage);
+      // Преобразуем Blob в ArrayBuffer для embedPng
+      const signatureArrayBuffer = await userData.signatureImage.arrayBuffer();
+      const signatureImage = await pdfDoc.embedPng(signatureArrayBuffer);
       const position = options.signaturePosition || {
         x: 400,
         y: 50,
@@ -218,7 +220,8 @@ export async function generatePDF(
  * Скачивание PDF файла
  */
 export function downloadPDF(pdfBytes: Uint8Array, filename: string = 'contract.pdf'): void {
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  // Uint8Array совместим с BlobPart, используем явное приведение типа для TypeScript
+  const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
